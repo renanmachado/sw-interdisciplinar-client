@@ -31,25 +31,42 @@ class ClientController extends Controller
      */
     public function store(Request $request)
     {
-        
-    	dd($request->all());
-        $this->validate($request, [
-            'name' => 'required',
-            'cpf' => 'required',
-            'cep' => 'required',
-            'address' => 'required',
-            'city' => 'required',
-            'state' => 'required',
-         ]);
+        try {
+
+        	$this->validate($request, [
+	            'name' => 'required',
+	            'cpf' => 'required',
+	            'cep' => 'required',
+	            'address' => 'required',
+	            'city' => 'required',
+	            'state' => 'required',
+         	]);
+
+    		$req = $this->gunzzleHttpRetryOnError('clients', 'POST', true, $request->all());
+    		$clients = json_decode($req->getBody()->getContents(), true);
+    		$clients = $clients['result'];
+
+    		return view('client', compact('clients'));
+    	} catch (Exception $ex) {
+            abort(500);
+        }
     }
 
     private function gunzzleHttpRetryOnError($url, $method = "GET", $retryOnError = true, $data = [])
     {
         try {
             $base = 'http://localhost:8000/';
-
             $client = new \GuzzleHttp\Client();
-            $request = $client->request($method, $base . $url);
+
+            if ($method != "GET") {
+            	$request = $client->request($method, $base . $url, [
+            		'form_params' => $data
+        		]);
+            } else {
+        		$request = $client->request($method, $base . $url);
+            }
+
+            
             return $request;
 
         } catch (\GuzzleHttp\Exception\BadResponseException $e) {

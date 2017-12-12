@@ -32,21 +32,17 @@ class ClientController extends Controller
     public function store(Request $request)
     {
         try {
+        	$data = $request->all();
 
-        	$this->validate($request, [
-	            'name' => 'required',
-	            'cpf' => 'required',
-	            'cep' => 'required',
-	            'address' => 'required',
-	            'city' => 'required',
-	            'state' => 'required',
-         	]);
-
-    		$req = $this->gunzzleHttpRetryOnError('clients', 'POST', true, $request->all());
+    		$req = $this->gunzzleHttpRetryOnError('clients', 'POST', true, $data);
     		$clients = json_decode($req->getBody()->getContents(), true);
-    		$clients = $clients['result'];
 
-    		return view('client', compact('clients'));
+    		if ($clients['status'] === 'success') {
+    			return redirect()->route('clients.index')->with('success', $clients['msg']);
+    		} else {
+    			return redirect(route('clients.index'))->withErrors($clients['error'])->withInput($data);
+    		}
+    		
     	} catch (Exception $ex) {
             abort(500);
         }
@@ -66,7 +62,6 @@ class ClientController extends Controller
         		$request = $client->request($method, $base . $url);
             }
 
-            
             return $request;
 
         } catch (\GuzzleHttp\Exception\BadResponseException $e) {
